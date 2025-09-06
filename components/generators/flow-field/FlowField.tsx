@@ -21,11 +21,15 @@ const FlowField: React.FC = React.memo(() => {
   const containerRef = useRef<HTMLDivElement>(null);
   const p5Ref = useRef<p5 | null>(null);
   const params = useFlowFieldStore();
+  const paramsRef = useRef(params);
+  
+  // Update params ref when params change
+  paramsRef.current = params;
   
   // Create memoized sketch with current params
   const sketch = useCallback(
-    (p: p5) => flowFieldSketch(params)(p),
-    [] // Only create once
+    (p: p5) => flowFieldSketch(paramsRef.current)(p),
+    [] // Only create once, uses paramsRef to access latest params
   );
   
   // Initialize p5

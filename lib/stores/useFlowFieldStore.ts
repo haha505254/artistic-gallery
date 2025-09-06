@@ -55,8 +55,12 @@ export const useFlowFieldStore = create<FlowFieldStore>()(
         typeof window !== 'undefined' ? urlStorage : localStorage
       ),
       partialize: (state) => {
-        const { updateParams: _, resetParams: __, ...params } = state;
-        return params;
+        // Only persist state values, exclude functions
+        return Object.fromEntries(
+          Object.entries(state).filter(([key]) => 
+            key !== 'updateParams' && key !== 'resetParams'
+          )
+        ) as Partial<FlowFieldStore>;
       },
     }
   )
