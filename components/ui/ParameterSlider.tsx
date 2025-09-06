@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 
 interface ParameterSliderProps {
   label: string;
@@ -14,7 +14,7 @@ interface ParameterSliderProps {
 /**
  * Custom slider component with Glass Morphism style
  */
-const ParameterSlider: React.FC<ParameterSliderProps> = ({
+const ParameterSlider: React.FC<ParameterSliderProps> = memo(({
   label,
   value,
   min,
@@ -23,6 +23,10 @@ const ParameterSlider: React.FC<ParameterSliderProps> = ({
   onChange,
 }) => {
   const percentage = ((value - min) / (max - min)) * 100;
+  
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(Number(e.target.value));
+  }, [onChange]);
   
   return (
     <div className="space-y-2">
@@ -39,7 +43,7 @@ const ParameterSlider: React.FC<ParameterSliderProps> = ({
           max={max}
           step={step}
           value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
+          onChange={handleChange}
           className="w-full h-2 rounded-full appearance-none cursor-pointer 
             [&::-webkit-slider-thumb]:appearance-none 
             [&::-webkit-slider-thumb]:w-4 
@@ -70,6 +74,8 @@ const ParameterSlider: React.FC<ParameterSliderProps> = ({
       </div>
     </div>
   );
-};
+});
+
+ParameterSlider.displayName = 'ParameterSlider';
 
 export default ParameterSlider;

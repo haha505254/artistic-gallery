@@ -2,6 +2,12 @@ import p5 from 'p5';
 import { ParticlePool } from './ParticlePool';
 import { perlinNoise } from '@/lib/utils/perlinNoise';
 
+// Disable FES for production - improves performance by up to 10x
+if (typeof window !== 'undefined') {
+  (window as Window & { p5?: typeof p5 }).p5 = p5;
+  (p5 as typeof p5 & { disableFriendlyErrors?: boolean }).disableFriendlyErrors = true;
+}
+
 export interface FlowFieldParams {
   particleCount: number;
   noiseScale: number;
@@ -31,8 +37,8 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
   const frameRates: number[] = [];
   const maxFrameRates = 30;
   
-  // Disable FES for performance
-  (p as p5 & { disableFriendlyErrors?: boolean }).disableFriendlyErrors = true;
+  // Track frame count for optimizations
+  let frameCount = 0;
   
   p.setup = () => {
     const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
@@ -60,11 +66,15 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
   };
   
   p.draw = () => {
+    frameCount++;
+    
     // Update FPS
     updateFPS();
     
-    // Update flow field
-    updateFlowField();
+    // Update flow field only every 3 frames for better performance
+    if (frameCount % 3 === 0) {
+      updateFlowField();
+    }
     
     // Fade background for trail effect
     graphics.fill(0, 0, 5, params.fadeRate * 10);
@@ -89,10 +99,10 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
     // Draw graphics buffer to main canvas
     p.image(graphics, 0, 0);
     
-    // Draw UI overlay
-    drawOverlay();
-    
-    // frameCounter++;
+    // Draw UI overlay (less frequently for performance)
+    if (frameCount % 5 === 0) {
+      drawOverlay();
+    }
   };
   
   /**

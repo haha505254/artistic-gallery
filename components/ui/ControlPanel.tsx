@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { useFlowFieldStore } from '@/lib/stores/useFlowFieldStore';
 import { ChevronLeft, ChevronRight, RotateCcw, Share2, Download } from 'lucide-react';
 import ParameterSlider from './ParameterSlider';
@@ -9,7 +9,7 @@ import ParameterSlider from './ParameterSlider';
  * Glass Morphism Control Panel
  * Controls for Flow Field parameters
  */
-const ControlPanel: React.FC = () => {
+const ControlPanel: React.FC = memo(() => {
   const [isOpen, setIsOpen] = useState(true);
   const { 
     particleCount, 
@@ -23,13 +23,13 @@ const ControlPanel: React.FC = () => {
     resetParams 
   } = useFlowFieldStore();
   
-  const handleShare = () => {
+  const handleShare = useCallback(() => {
     // Copy URL with params to clipboard
     navigator.clipboard.writeText(window.location.href);
     alert('Link copied to clipboard!');
-  };
+  }, []);
   
-  const handleDownload = () => {
+  const handleDownload = useCallback(() => {
     // Download canvas as image
     const canvas = document.querySelector('canvas');
     if (canvas) {
@@ -44,7 +44,7 @@ const ControlPanel: React.FC = () => {
         }
       });
     }
-  };
+  }, []);
   
   return (
     <div 
@@ -217,6 +217,8 @@ const ControlPanel: React.FC = () => {
       </div>
     </div>
   );
-};
+});
+
+ControlPanel.displayName = 'ControlPanel';
 
 export default ControlPanel;
