@@ -1,4 +1,4 @@
-import { useEffect, useRef, MutableRefObject } from 'react';
+import React, { useEffect, useRef, MutableRefObject } from 'react';
 import p5 from 'p5';
 
 /**
@@ -8,7 +8,7 @@ import p5 from 'p5';
 export function useP5(
   sketch: (p: p5) => void,
   containerRef: MutableRefObject<HTMLDivElement | null>,
-  dependencies: any[] = []
+  dependencies: React.DependencyList = []
 ) {
   const p5Instance = useRef<p5 | null>(null);
   
@@ -17,8 +17,9 @@ export function useP5(
     
     // Clean up existing instance
     if (p5Instance.current) {
-      if ((p5Instance.current as any).cleanup) {
-        (p5Instance.current as any).cleanup();
+      const p5WithCleanup = p5Instance.current as p5 & { cleanup?: () => void };
+      if (p5WithCleanup.cleanup) {
+        p5WithCleanup.cleanup();
       }
       p5Instance.current.remove();
     }
@@ -29,12 +30,14 @@ export function useP5(
     // Cleanup on unmount
     return () => {
       if (p5Instance.current) {
-        if ((p5Instance.current as any).cleanup) {
-          (p5Instance.current as any).cleanup();
+        const p5WithCleanup = p5Instance.current as p5 & { cleanup?: () => void };
+        if (p5WithCleanup.cleanup) {
+          p5WithCleanup.cleanup();
         }
         p5Instance.current.remove();
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sketch, containerRef, ...dependencies]);
   
   // Return instance for external control

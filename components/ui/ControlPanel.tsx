@@ -177,7 +177,7 @@ const ControlPanel: React.FC = () => {
             </label>
             <select
               value={colorMode}
-              onChange={(e) => updateParams({ colorMode: e.target.value as any })}
+              onChange={(e) => updateParams({ colorMode: e.target.value as 'velocity' | 'position' | 'gradient' })}
               className="w-full px-3 py-2 rounded-lg text-white text-sm focus:outline-none"
               style={{
                 background: 'rgba(255, 255, 255, 0.1)',
@@ -199,7 +199,7 @@ const ControlPanel: React.FC = () => {
             </label>
             <select
               value={renderMode}
-              onChange={(e) => updateParams({ renderMode: e.target.value as any })}
+              onChange={(e) => updateParams({ renderMode: e.target.value as 'dots' | 'lines' | 'both' })}
               className="w-full px-3 py-2 rounded-lg text-white text-sm focus:outline-none"
               style={{
                 background: 'rgba(255, 255, 255, 0.1)',

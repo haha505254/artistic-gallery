@@ -24,15 +24,15 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
   let rows: number;
   const scale = 20;
   let zoff = 0;
-  let frameCounter = 0;
+  // let frameCounter = 0; // Not used currently
   
   // Performance monitoring
   let fps = 0;
-  let frameRates: number[] = [];
+  const frameRates: number[] = [];
   const maxFrameRates = 30;
   
   // Disable FES for performance
-  (p as any).disableFriendlyErrors = true;
+  (p as p5 & { disableFriendlyErrors?: boolean }).disableFriendlyErrors = true;
   
   p.setup = () => {
     const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
@@ -92,7 +92,7 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
     // Draw UI overlay
     drawOverlay();
     
-    frameCounter++;
+    // frameCounter++;
   };
   
   /**
@@ -180,7 +180,7 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
   /**
    * Update parameters dynamically
    */
-  (p as any).updateParams = (newParams: Partial<FlowFieldParams>) => {
+  (p as p5 & { updateParams?: (newParams: Partial<FlowFieldParams>) => void }).updateParams = (newParams: Partial<FlowFieldParams>) => {
     Object.assign(params, newParams);
     
     // Update particle count if changed
@@ -192,7 +192,7 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
   /**
    * Clean up resources
    */
-  (p as any).cleanup = () => {
+  (p as p5 & { cleanup?: () => void }).cleanup = () => {
     if (graphics) {
       graphics.remove();
     }

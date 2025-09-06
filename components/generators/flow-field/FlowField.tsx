@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useRef, useCallback, useEffect } from 'react';
+import p5 from 'p5';
 import { useP5 } from '@/hooks/useP5';
-import { flowFieldSketch } from './FlowFieldSketch';
+import { flowFieldSketch, type FlowFieldParams } from './FlowFieldSketch';
 import { useFlowFieldStore } from '@/lib/stores/useFlowFieldStore';
 import dynamic from 'next/dynamic';
 
@@ -18,12 +19,12 @@ const ControlPanel = dynamic(
  */
 const FlowField: React.FC = React.memo(() => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const p5Ref = useRef<any>(null);
+  const p5Ref = useRef<p5 | null>(null);
   const params = useFlowFieldStore();
   
   // Create memoized sketch with current params
   const sketch = useCallback(
-    (p: any) => flowFieldSketch(params)(p),
+    (p: p5) => flowFieldSketch(params)(p),
     [] // Only create once
   );
   
@@ -32,8 +33,8 @@ const FlowField: React.FC = React.memo(() => {
   
   // Update params when they change
   useEffect(() => {
-    if (p5Ref.current && (p5Ref.current as any).updateParams) {
-      (p5Ref.current as any).updateParams(params);
+    if (p5Ref.current && (p5Ref.current as p5 & { updateParams?: (params: FlowFieldParams) => void }).updateParams) {
+      (p5Ref.current as p5 & { updateParams: (params: FlowFieldParams) => void }).updateParams(params);
     }
   }, [params]);
   
