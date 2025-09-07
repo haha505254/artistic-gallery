@@ -28,10 +28,20 @@ export class ParticlePool {
   }
   
   /**
-   * Get active particles
+   * Get active particles count
    */
-  getActiveParticles(): Particle[] {
-    return this.particles.slice(0, this.activeCount);
+  getActiveCount(): number {
+    return this.activeCount;
+  }
+  
+  /**
+   * Get particle at index (for direct iteration)
+   */
+  getParticle(index: number): Particle | null {
+    if (index < this.activeCount) {
+      return this.particles[index];
+    }
+    return null;
   }
   
   /**
@@ -62,19 +72,28 @@ export class ParticlePool {
     deltaTime: number = 1,
     colorMode: 'velocity' | 'position' | 'gradient' = 'velocity'
   ) {
+    // Pre-calculate mouse force parameters if needed
+    const radiusSq = mouseRadius * mouseRadius;
+    const hasMouseForce = mouseStrength !== 0;
+    
+    // Update all particles
     for (let i = 0; i < this.activeCount; i++) {
       const particle = this.particles[i];
       
       // Apply flow field
       particle.follow(flowField, cols, scale);
       
-      // Apply mouse force
-      if (mouseStrength !== 0) {
-        // Log mouse force application for first particle occasionally (disabled for performance)
-        // if (i === 0 && Math.random() < 0.01) {
-        //   console.log('[ParticlePool] Applying mouse force:', { mouseX, mouseY, mouseRadius, mouseStrength });
-        // }
-        particle.applyMouseForce(this.p, mouseX, mouseY, mouseRadius, mouseStrength);
+      // Apply mouse force with early exit optimization
+      if (hasMouseForce) {
+        // Quick distance check using squared distance
+        const dx = particle.pos.x - mouseX;
+        const dy = particle.pos.y - mouseY;
+        const distSq = dx * dx + dy * dy;
+        
+        // Only apply force if within radius
+        if (distSq < radiusSq) {
+          particle.applyMouseForce(this.p, mouseX, mouseY, mouseRadius, mouseStrength);
+        }
       }
       
       // Update physics with color mode (deltaTime is speed value)
@@ -83,53 +102,65 @@ export class ParticlePool {
       // Handle edges
       particle.edges(this.p);
       
-      // Respawn dead particles (currently disabled since life no longer decreases)
-      // Keeping this check in case we add other death conditions later
+      // Respawn dead particles if needed
       if (particle.isDead()) {
-        console.warn('[ParticlePool] Particle died unexpectedly, resetting');
         particle.reset(this.p);
       }
     }
   }
   
   /**
-   * Draw all particles (optimized batch rendering)
+   * Draw all particles (simple optimized rendering)
    */
   draw(graphics: p5.Graphics, mode: 'dots' | 'lines' | 'both' = 'lines') {
     graphics.push();
     
     if (mode === 'dots' || mode === 'both') {
-      // Batch render dots
+      // Render dots with simple color caching
       graphics.noStroke();
+      let lastColorKey = '';
+      
       for (let i = 0; i < this.activeCount; i++) {
         const particle = this.particles[i];
         const alpha = particle.life * 255;
         
-        graphics.fill(
-          particle.color.h,
-          particle.color.s,
-          particle.color.l,
-          alpha
-        );
+        // Only update fill when color changes significantly
+        const colorKey = `${Math.floor(particle.color.h / 5)}-${Math.floor(particle.color.s / 10)}-${Math.floor(particle.color.l / 10)}-${Math.floor(alpha / 20)}`;
+        if (colorKey !== lastColorKey) {
+          graphics.fill(
+            particle.color.h,
+            particle.color.s,
+            particle.color.l,
+            alpha
+          );
+          lastColorKey = colorKey;
+        }
         
         graphics.circle(particle.pos.x, particle.pos.y, 2);
       }
     }
     
     if (mode === 'lines' || mode === 'both') {
-      // Batch render lines
+      // Render lines with simple color caching
       graphics.noFill();
+      graphics.strokeWeight(1);
+      let lastColorKey = '';
+      
       for (let i = 0; i < this.activeCount; i++) {
         const particle = this.particles[i];
         const alpha = particle.life * 100; // More transparent for lines
         
-        graphics.stroke(
-          particle.color.h,
-          particle.color.s,
-          particle.color.l,
-          alpha
-        );
-        graphics.strokeWeight(1);
+        // Only update stroke when color changes significantly
+        const colorKey = `${Math.floor(particle.color.h / 5)}-${Math.floor(particle.color.s / 10)}-${Math.floor(particle.color.l / 10)}-${Math.floor(alpha / 10)}`;
+        if (colorKey !== lastColorKey) {
+          graphics.stroke(
+            particle.color.h,
+            particle.color.s,
+            particle.color.l,
+            alpha
+          );
+          lastColorKey = colorKey;
+        }
         
         graphics.line(
           particle.prevPos.x,

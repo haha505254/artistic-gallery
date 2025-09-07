@@ -18,7 +18,7 @@ interface FlowFieldStore extends FlowFieldParams {
 
 const defaultParams: FlowFieldParams = {
   particleCount: 800,  // Reduced for better performance
-  noiseScale: 0.01,
+  noiseScale: 0.1,  // Adjusted for visible effect
   speed: 2,
   fadeRate: 0.98,  // Slightly higher to reduce overdraw
   mouseForce: 100,  // Increased for better visibility

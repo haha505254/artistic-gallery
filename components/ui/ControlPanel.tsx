@@ -137,9 +137,9 @@ const ControlPanel: React.FC = memo(() => {
           <ParameterSlider
             label="Noise Scale"
             value={noiseScale}
-            min={0.001}
-            max={0.05}
-            step={0.001}
+            min={0.01}
+            max={0.5}
+            step={0.01}
             onChange={(value) => updateParams({ noiseScale: value })}
           />
           
