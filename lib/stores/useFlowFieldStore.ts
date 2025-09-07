@@ -17,11 +17,11 @@ interface FlowFieldStore extends FlowFieldParams {
 }
 
 const defaultParams: FlowFieldParams = {
-  particleCount: 2500,  // Reduced from 5000 for better performance
+  particleCount: 800,  // Reduced for better performance
   noiseScale: 0.01,
   speed: 2,
   fadeRate: 0.98,  // Slightly higher to reduce overdraw
-  mouseForce: 30,
+  mouseForce: 100,  // Increased for better visibility
   colorMode: 'velocity',
   renderMode: 'lines',
 };
@@ -32,7 +32,7 @@ const updateURL = debounce((name: string, value: string) => {
   const url = new URL(window.location.href);
   url.searchParams.set(name, params);
   window.history.replaceState({}, '', url);
-}, 500); // 500ms delay
+}, 1000); // 1000ms delay to reduce URL updates
 
 // Custom URL storage for sharing
 const urlStorage = {

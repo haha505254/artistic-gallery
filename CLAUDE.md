@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 重要提醒
+- **不要自動啟動開發伺服器** - 使用者會自行在另外的終端機執行 `npm run dev`
+- 只在使用者明確要求時才執行伺服器相關指令
+
 ## 指令
 
 ### 開發

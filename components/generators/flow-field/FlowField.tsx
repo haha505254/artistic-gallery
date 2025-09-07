@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import p5 from 'p5';
 import { useP5 } from '@/hooks/useP5';
 import { flowFieldSketch, type FlowFieldParams } from './FlowFieldSketch';
@@ -26,19 +26,47 @@ const FlowField: React.FC = React.memo(() => {
   // Update params ref when params change
   paramsRef.current = params;
   
-  // Create memoized sketch with current params
-  const sketch = useCallback(
-    (p: p5) => flowFieldSketch(paramsRef.current)(p),
-    [] // Only create once, uses paramsRef to access latest params
-  );
+  // Create sketch function once
+  const sketchRef = useRef<((p: p5) => void) | undefined>(undefined);
+  if (!sketchRef.current) {
+    sketchRef.current = (p: p5) => {
+      // console.log('[FlowField] Storing p5 instance');
+      // Store p5 instance for later access
+      p5Ref.current = p;
+      flowFieldSketch(paramsRef.current)(p);
+      // console.log('[FlowField] p5 instance stored, updateParams available?', !!(p as any).updateParams);
+    };
+  }
   
-  // Initialize p5
-  p5Ref.current = useP5(sketch, containerRef, []);
+  // Initialize p5 only once
+  const p5InstanceRef = useP5(sketchRef.current, containerRef, []);
+  
+  // Update p5Ref when instance is created
+  useEffect(() => {
+    if (p5InstanceRef.current && !p5Ref.current) {
+      p5Ref.current = p5InstanceRef.current;
+      // console.log('[FlowField] p5Ref updated from useP5');
+    }
+  });
+  
+  // Track previous params to avoid unnecessary updates
+  const prevParamsRef = useRef<FlowFieldParams | undefined>(undefined);
   
   // Update params when they change
   useEffect(() => {
+    // Check if params actually changed
+    if (prevParamsRef.current && 
+        JSON.stringify(prevParamsRef.current) === JSON.stringify(params)) {
+      return; // No actual change, skip update
+    }
+    
+    prevParamsRef.current = params;
+    
+    // Only update if p5 is ready
     if (p5Ref.current && (p5Ref.current as p5 & { updateParams?: (params: FlowFieldParams) => void }).updateParams) {
       (p5Ref.current as p5 & { updateParams: (params: FlowFieldParams) => void }).updateParams(params);
+    } else if (!p5Ref.current) {
+      console.warn('[FlowField] p5Ref.current is null when trying to update params');
     }
   }, [params]);
   

@@ -36,7 +36,23 @@ const ParameterSlider: React.FC<ParameterSliderProps> = memo(({
           {value.toFixed(step < 1 ? Math.abs(Math.floor(Math.log10(step))) : 0)}
         </span>
       </div>
-      <div className="relative">
+      <div className="relative h-2 flex items-center">
+        {/* Background track */}
+        <div 
+          className="absolute w-full h-2 rounded-full"
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+          }}
+        />
+        {/* Progress fill */}
+        <div 
+          className="absolute h-2 rounded-full pointer-events-none"
+          style={{
+            width: `${percentage}%`,
+            background: 'rgba(255, 255, 255, 0.3)',
+          }}
+        />
+        {/* Actual input range */}
         <input
           type="range"
           min={min}
@@ -44,7 +60,7 @@ const ParameterSlider: React.FC<ParameterSliderProps> = memo(({
           step={step}
           value={value}
           onChange={handleChange}
-          className="w-full h-2 rounded-full appearance-none cursor-pointer 
+          className="relative w-full h-2 rounded-full appearance-none cursor-pointer bg-transparent z-10
             [&::-webkit-slider-thumb]:appearance-none 
             [&::-webkit-slider-thumb]:w-4 
             [&::-webkit-slider-thumb]:h-4 
@@ -54,6 +70,8 @@ const ParameterSlider: React.FC<ParameterSliderProps> = memo(({
             [&::-webkit-slider-thumb]:shadow-lg 
             [&::-webkit-slider-thumb]:transition-transform 
             [&::-webkit-slider-thumb]:hover:scale-125
+            [&::-webkit-slider-thumb]:relative
+            [&::-webkit-slider-thumb]:z-20
             [&::-moz-range-thumb]:w-4 
             [&::-moz-range-thumb]:h-4 
             [&::-moz-range-thumb]:bg-white 
@@ -62,14 +80,9 @@ const ParameterSlider: React.FC<ParameterSliderProps> = memo(({
             [&::-moz-range-thumb]:shadow-lg 
             [&::-moz-range-thumb]:transition-transform 
             [&::-moz-range-thumb]:hover:scale-125
-            [&::-moz-range-thumb]:border-0"
-          style={{
-            background: `linear-gradient(to right, 
-              rgba(255, 255, 255, 0.3) 0%, 
-              rgba(255, 255, 255, 0.3) ${percentage}%, 
-              rgba(255, 255, 255, 0.1) ${percentage}%, 
-              rgba(255, 255, 255, 0.1) 100%)`
-          }}
+            [&::-moz-range-thumb]:border-0
+            [&::-moz-range-thumb]:relative
+            [&::-moz-range-thumb]:z-20"
         />
       </div>
     </div>

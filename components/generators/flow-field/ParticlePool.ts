@@ -59,7 +59,8 @@ export class ParticlePool {
     mouseY: number,
     mouseRadius: number,
     mouseStrength: number,
-    deltaTime: number = 1
+    deltaTime: number = 1,
+    colorMode: 'velocity' | 'position' | 'gradient' = 'velocity'
   ) {
     for (let i = 0; i < this.activeCount; i++) {
       const particle = this.particles[i];
@@ -69,17 +70,23 @@ export class ParticlePool {
       
       // Apply mouse force
       if (mouseStrength !== 0) {
+        // Log mouse force application for first particle occasionally (disabled for performance)
+        // if (i === 0 && Math.random() < 0.01) {
+        //   console.log('[ParticlePool] Applying mouse force:', { mouseX, mouseY, mouseRadius, mouseStrength });
+        // }
         particle.applyMouseForce(this.p, mouseX, mouseY, mouseRadius, mouseStrength);
       }
       
-      // Update physics
-      particle.update(this.p, deltaTime);
+      // Update physics with color mode (deltaTime is speed value)
+      particle.update(this.p, deltaTime * 0.1, colorMode);
       
       // Handle edges
       particle.edges(this.p);
       
-      // Respawn dead particles
+      // Respawn dead particles (currently disabled since life no longer decreases)
+      // Keeping this check in case we add other death conditions later
       if (particle.isDead()) {
+        console.warn('[ParticlePool] Particle died unexpectedly, resetting');
         particle.reset(this.p);
       }
     }

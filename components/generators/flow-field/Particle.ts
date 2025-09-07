@@ -12,6 +12,8 @@ export class Particle {
   maxSpeed: number;
   color: { h: number; s: number; l: number };
   life: number;
+  private tempMouse: p5.Vector;  // Reusable vector for mouse calculations
+  private tempForce: p5.Vector;  // Reusable vector for force calculations
   
   constructor(p: p5, x?: number, y?: number) {
     // Initialize position
@@ -27,8 +29,12 @@ export class Particle {
     this.vel = p.createVector(0, 0);
     this.acc = p.createVector(0, 0);
     this.prevPos = this.pos.copy();
-    this.maxSpeed = 4;
+    this.maxSpeed = 8;  // Increased for more responsive mouse interaction
     this.life = 1;
+    
+    // Initialize reusable vectors
+    this.tempMouse = p.createVector(0, 0);
+    this.tempForce = p.createVector(0, 0);
     
     // Initialize color based on position
     this.color = {
@@ -55,7 +61,7 @@ export class Particle {
     
     if (flowField[index]) {
       const force = flowField[index].copy();
-      force.mult(0.1); // Reduce force strength
+      force.mult(0.05); // Further reduced to make mouse force more dominant
       this.applyForce(force);
     }
   }
@@ -63,7 +69,8 @@ export class Particle {
   /**
    * Update particle physics
    */
-  update(p: p5, deltaTime: number = 1) {
+  update(p: p5, deltaTime: number = 1, colorMode: 'velocity' | 'position' | 'gradient' = 'velocity') {
+    // Add acceleration to velocity
     this.vel.add(this.acc);
     this.vel.limit(this.maxSpeed);
     
@@ -75,34 +82,87 @@ export class Particle {
     deltaVel.mult(deltaTime);
     this.pos.add(deltaVel);
     
-    // Reset acceleration
-    this.acc.mult(0);
+    // Reset acceleration AFTER using it (ready for next frame's forces)
+    this.acc.set(0, 0);
     
-    // Update color based on velocity
-    const speed = this.vel.mag();
-    this.color.h = (this.color.h + speed * 2) % 360;
-    this.color.l = p.map(speed, 0, this.maxSpeed, 30, 70);
+    // Update color based on selected mode
+    switch (colorMode) {
+      case 'velocity':
+        // Color based on speed (original implementation)
+        const speed = this.vel.mag();
+        this.color.h = (this.color.h + speed * 2) % 360;
+        this.color.l = p.map(speed, 0, this.maxSpeed, 30, 70);
+        this.color.s = 70;
+        break;
+        
+      case 'position':
+        // Color based on position
+        this.color.h = p.map(this.pos.x, 0, p.width, 0, 360);
+        this.color.s = p.map(this.pos.y, 0, p.height, 50, 100);
+        this.color.l = 60;
+        break;
+        
+      case 'gradient':
+        // Gradient from purple to cyan based on diagonal position
+        const diagonal = (this.pos.x / p.width + this.pos.y / p.height) / 2;
+        this.color.h = p.map(diagonal, 0, 1, 270, 180); // Purple to cyan
+        this.color.s = 80;
+        this.color.l = p.map(Math.sin(diagonal * Math.PI * 2), -1, 1, 40, 60);
+        break;
+    }
     
-    // Fade life slightly
-    this.life *= 0.995;
+    // Fade life very slowly for visual effect only
+    // Removed aggressive fade to prevent particles from disappearing
+    // this.life *= 0.995;  // This was causing particles to disappear after ~15 seconds
   }
   
   /**
    * Apply mouse interaction force
    */
   applyMouseForce(p: p5, mouseX: number, mouseY: number, radius: number, strength: number) {
-    const mouse = p.createVector(mouseX, mouseY);
-    const distance = p5.Vector.dist(this.pos, mouse);
+    // Use reusable vector instead of creating new one
+    this.tempMouse.set(mouseX, mouseY);
+    
+    // Calculate distance
+    const dx = this.pos.x - mouseX;
+    const dy = this.pos.y - mouseY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // Debug: Log for first particle to see why force isn't being applied
+    if (Math.random() < 0.01) { // Log 1% of particles
+      console.log('[Particle] Distance check:', {
+        mouseX: mouseX.toFixed(0),
+        mouseY: mouseY.toFixed(0),
+        particleX: this.pos.x.toFixed(0),
+        particleY: this.pos.y.toFixed(0),
+        distance: distance.toFixed(1),
+        radius,
+        inRange: distance < radius
+      });
+    }
     
     if (distance < radius && distance > 0) {
-      const force = p5.Vector.sub(this.pos, mouse);
-      force.normalize();
+      // Calculate force direction manually
+      this.tempForce.set(dx / distance, dy / distance);
       
-      // Inverse square law for realistic force
-      const mag = (strength * radius) / (distance * distance);
-      force.mult(mag);
+      // Linear decay for stronger, more visible effect
+      const normalizedDistance = distance / radius; // 0 to 1
+      const mag = strength * (1 - normalizedDistance) * 0.5;
+      this.tempForce.mult(mag);
       
-      this.applyForce(force);
+      // Log when force is actually applied
+      if (Math.random() < 0.01) { // Increased frequency to 1%
+        console.log('[Particle] Mouse force APPLIED:', { 
+          distance: distance.toFixed(1), 
+          strength,
+          mag: mag.toFixed(2), 
+          forceX: this.tempForce.x.toFixed(2),
+          forceY: this.tempForce.y.toFixed(2)
+        });
+      }
+      
+      // Apply the force
+      this.acc.add(this.tempForce);
     }
   }
   

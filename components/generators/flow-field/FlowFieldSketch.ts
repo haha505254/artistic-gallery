@@ -22,7 +22,12 @@ export interface FlowFieldParams {
  * Main Flow Field p5.js sketch
  * Optimized for performance with offscreen rendering
  */
-export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
+export const flowFieldSketch = (initialParams: FlowFieldParams) => (p: p5) => {
+  // console.log('[FlowFieldSketch] Initializing with params:', initialParams);
+  
+  // Create a mutable params container that both draw and updateParams can access
+  const currentParams = { ...initialParams };
+  
   let particlePool: ParticlePool;
   let flowField: p5.Vector[] = [];
   let graphics: p5.Graphics;
@@ -31,6 +36,14 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
   const scale = 20;
   let zoff = 0;
   // let frameCounter = 0; // Not used currently
+  
+  // Mouse tracking variables
+  const mousePos = { x: 0, y: 0 };
+  const lastMousePos = { x: 0, y: 0 };
+  let canvasElement: HTMLCanvasElement | null = null;
+  let mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
+  let mouseEnterHandler: ((e: MouseEvent) => void) | null = null;
+  let mouseLeaveHandler: (() => void) | null = null;
   
   // Performance monitoring
   let fps = 0;
@@ -47,6 +60,45 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
     // Set pixel density to 1 for consistent performance
     p.pixelDensity(1);
     
+    // Get the actual canvas DOM element
+    canvasElement = ((canvas as unknown as { canvas: HTMLCanvasElement }).canvas) as HTMLCanvasElement;
+    
+    // Initialize mouse position
+    mousePos.x = p.width / 2;
+    mousePos.y = p.height / 2;
+    lastMousePos.x = mousePos.x;
+    lastMousePos.y = mousePos.y;
+    
+    // Add native mouse event listeners to the canvas
+    if (canvasElement) {
+      // Create event handlers and store references for cleanup
+      mouseMoveHandler = (e: MouseEvent) => {
+        const rect = canvasElement!.getBoundingClientRect();
+        const scaleX = canvasElement!.width / rect.width;
+        const scaleY = canvasElement!.height / rect.height;
+        
+        mousePos.x = (e.clientX - rect.left) * scaleX;
+        mousePos.y = (e.clientY - rect.top) * scaleY;
+        
+        // Clamp to canvas bounds
+        mousePos.x = Math.max(0, Math.min(mousePos.x, p.width));
+        mousePos.y = Math.max(0, Math.min(mousePos.y, p.height));
+      };
+      
+      mouseEnterHandler = mouseMoveHandler; // Use same handler for enter
+      
+      mouseLeaveHandler = () => {
+        // Optionally reset mouse position or keep last position
+        // For now, we'll keep the last position
+      };
+      
+      canvasElement.addEventListener('mousemove', mouseMoveHandler);
+      canvasElement.addEventListener('mouseenter', mouseEnterHandler);
+      canvasElement.addEventListener('mouseleave', mouseLeaveHandler);
+      
+      console.log('[Setup] Native mouse event listeners added to canvas');
+    }
+    
     // Create offscreen graphics buffer for trails
     graphics = p.createGraphics(p.width, p.height);
     graphics.colorMode(p.HSL, 360, 100, 100, 100);
@@ -59,7 +111,7 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
     
     // Initialize particle pool
     particlePool = new ParticlePool(p, 10000);
-    particlePool.setActiveCount(params.particleCount);
+    particlePool.setActiveCount(currentParams.particleCount);
     
     // Set color mode
     p.colorMode(p.HSL, 360, 100, 100, 100);
@@ -68,16 +120,33 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
   p.draw = () => {
     frameCount++;
     
+    // Update last mouse position (current position is updated by native event listeners)
+    lastMousePos.x = mousePos.x;
+    lastMousePos.y = mousePos.y;
+    
+    // Log mouse info every 60 frames for debugging (temporarily increased frequency)
+    if (frameCount % 60 === 0) {
+      console.log('[Draw] Frame:', frameCount, 'Mouse:', { 
+        x: mousePos.x, 
+        y: mousePos.y,
+        lastX: lastMousePos.x,
+        lastY: lastMousePos.y,
+        force: currentParams.mouseForce,
+        particleCount: currentParams.particleCount
+      });
+    }
+    
+    
     // Update FPS
     updateFPS();
     
-    // Update flow field only every 3 frames for better performance
-    if (frameCount % 3 === 0) {
+    // Update flow field only every 5 frames for better performance
+    if (frameCount % 5 === 0) {
       updateFlowField();
     }
     
     // Fade background for trail effect
-    graphics.fill(0, 0, 5, params.fadeRate * 10);
+    graphics.fill(0, 0, 5, currentParams.fadeRate * 10);
     graphics.noStroke();
     graphics.rect(0, 0, p.width, p.height);
     
@@ -86,22 +155,38 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
       flowField,
       cols,
       scale,
-      p.mouseX,
-      p.mouseY,
-      100, // Mouse radius
-      params.mouseForce,
-      params.speed * 0.1
+      mousePos.x,
+      mousePos.y,
+      200, // Mouse radius - increased for testing
+      currentParams.mouseForce,
+      currentParams.speed,  // Pass speed directly, not multiplied
+      currentParams.colorMode
     );
     
     // Draw particles to graphics buffer
-    particlePool.draw(graphics, params.renderMode);
+    particlePool.draw(graphics, currentParams.renderMode);
     
     // Draw graphics buffer to main canvas
     p.image(graphics, 0, 0);
     
     // Draw UI overlay (less frequently for performance)
-    if (frameCount % 5 === 0) {
+    if (frameCount % 10 === 0) {
       drawOverlay();
+    }
+    
+    // Draw mouse indicator for debugging (can be removed later)
+    if (currentParams.mouseForce !== 0) {
+      p.push();
+      p.noFill();
+      p.stroke(180, 100, 50, 30); // Cyan color with transparency
+      p.strokeWeight(1);
+      p.circle(mousePos.x, mousePos.y, 200 * 2); // Show mouse radius
+      
+      // Add a center dot to show exact mouse position
+      p.fill(180, 100, 50, 60);
+      p.noStroke();
+      p.circle(mousePos.x, mousePos.y, 10);
+      p.pop();
     }
   };
   
@@ -121,7 +206,7 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
         const angle = perlinNoise.getFlowAngle(
           xoff,
           yoff,
-          params.noiseScale,
+          currentParams.noiseScale,
           zoff
         );
         
@@ -130,9 +215,9 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
         v.setMag(1);
         flowField[index] = v;
         
-        xoff += params.noiseScale;
+        xoff += currentParams.noiseScale;
       }
-      yoff += params.noiseScale;
+      yoff += currentParams.noiseScale;
     }
     
     zoff += 0.003; // Animate flow field
@@ -173,6 +258,27 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
   p.windowResized = () => {
     p.resizeCanvas(p.windowWidth, p.windowHeight);
     
+    // Re-attach event listeners to the new canvas if needed
+    // (p5 might create a new canvas element on resize)
+    const canvas = document.querySelector('#flow-field-container canvas') as HTMLCanvasElement;
+    if (canvas && canvas !== canvasElement) {
+      // Remove old listeners
+      if (canvasElement && mouseMoveHandler && mouseEnterHandler && mouseLeaveHandler) {
+        canvasElement.removeEventListener('mousemove', mouseMoveHandler);
+        canvasElement.removeEventListener('mouseenter', mouseEnterHandler);
+        canvasElement.removeEventListener('mouseleave', mouseLeaveHandler);
+      }
+      
+      // Update canvas reference and re-attach listeners
+      canvasElement = canvas;
+      if (mouseMoveHandler && mouseEnterHandler && mouseLeaveHandler) {
+        canvasElement.addEventListener('mousemove', mouseMoveHandler);
+        canvasElement.addEventListener('mouseenter', mouseEnterHandler);
+        canvasElement.addEventListener('mouseleave', mouseLeaveHandler);
+        console.log('[WindowResized] Re-attached mouse event listeners to new canvas');
+      }
+    }
+    
     // Recreate graphics buffer
     graphics = p.createGraphics(p.width, p.height);
     graphics.colorMode(p.HSL, 360, 100, 100, 100);
@@ -187,11 +293,17 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
     particlePool.resetAll();
   };
   
+  // Mouse events are now handled by native event listeners in setup
+  // No need for p.mouseMoved or p.mouseDragged
+  
   /**
    * Update parameters dynamically
    */
   (p as p5 & { updateParams?: (newParams: Partial<FlowFieldParams>) => void }).updateParams = (newParams: Partial<FlowFieldParams>) => {
-    Object.assign(params, newParams);
+    // console.log('[updateParams] Updating params:', newParams);
+    // console.log('[updateParams] Before:', currentParams);
+    Object.assign(currentParams, newParams);
+    // console.log('[updateParams] After:', currentParams);
     
     // Update particle count if changed
     if (newParams.particleCount !== undefined) {
@@ -203,8 +315,26 @@ export const flowFieldSketch = (params: FlowFieldParams) => (p: p5) => {
    * Clean up resources
    */
   (p as p5 & { cleanup?: () => void }).cleanup = () => {
+    // Remove event listeners
+    if (canvasElement) {
+      if (mouseMoveHandler) {
+        canvasElement.removeEventListener('mousemove', mouseMoveHandler);
+      }
+      if (mouseEnterHandler) {
+        canvasElement.removeEventListener('mouseenter', mouseEnterHandler);
+      }
+      if (mouseLeaveHandler) {
+        canvasElement.removeEventListener('mouseleave', mouseLeaveHandler);
+      }
+      console.log('[Cleanup] Native mouse event listeners removed from canvas');
+    }
+    
+    // Clean up graphics
     if (graphics) {
       graphics.remove();
     }
   };
+  
+  // Log that the sketch is fully initialized (disabled for performance)
+  // console.log('[FlowFieldSketch] Sketch initialized, updateParams set:', !!(p as any).updateParams);
 };
